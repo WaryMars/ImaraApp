@@ -1,35 +1,40 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
+import React, { useState } from "react";
+import { Stack } from "expo-router";
+import { View, StyleSheet } from "react-native";
+import { CustomTabBar } from "@/components/navigation/CustomTabBar";
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+export const DrawerContext = React.createContext({
+  isDrawerOpen: false,
+  setIsDrawerOpen: (value: boolean) => {},
+});
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
-        }}
-      />
-    </Tabs>
+    <DrawerContext.Provider value={{ isDrawerOpen, setIsDrawerOpen }}>
+      <View style={styles.container}>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: "#0F0F0F" },
+          }}
+        >
+          <Stack.Screen name="index" />
+          <Stack.Screen name="map" />
+          <Stack.Screen name="inspiration" />
+          <Stack.Screen name="messages" />
+        </Stack>
+
+        {!isDrawerOpen && <CustomTabBar />}
+      </View>
+    </DrawerContext.Provider>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#0F0F0F",
+  },
+});
