@@ -222,6 +222,3 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
   },
 });
-
-// admin1234@test.com
-// @zertY1234
