@@ -23,7 +23,7 @@ export default function TabLayout() {
           <Stack.Screen name="index" />
           <Stack.Screen name="map" />
           <Stack.Screen name="inspiration" />
-          <Stack.Screen name="messages" />
+          <Stack.Screen name="chat" />
         </Stack>
 
         {!isDrawerOpen && <CustomTabBar />}

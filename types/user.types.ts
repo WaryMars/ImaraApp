@@ -1,7 +1,7 @@
 import { Timestamp } from "firebase/firestore";
 
 export type UserType = "client" | "professional";
-export type UserMode = "authenticated" | "guest"; // Nouveau
+export type UserMode = "authenticated" | "guest";
 
 export interface GDPRConsent {
   marketing: boolean;
@@ -9,18 +9,17 @@ export interface GDPRConsent {
   consentDate: Timestamp;
 }
 
-export interface NotificationPreferences {
-  bookingReminders: boolean; // Rappel avant RDV
-  promotions: boolean; // Promos & offres spéciales
-  newServices: boolean; // Nouveaux services
-  reviews: boolean; // Avis publié
+// ✅ AJOUTE CETTE INTERFACE
+export interface UserPreferences {
+  notifications: boolean;
+  searchRadius: number;
 }
 
 export interface User {
   id: string;
   email: string;
   type: UserType;
-  mode: UserMode; // Nouveau : 'authenticated' ou 'guest'
+  mode: UserMode;
   firstName: string;
   lastName: string;
   phoneNumber: string;
@@ -33,10 +32,8 @@ export interface User {
 
   // Client uniquement
   favoriteBusinesses?: string[];
-  preferences?: {
-    notifications?: NotificationPreferences;
-    searchRadius: number;
-  };
+  preferences?: UserPreferences; // ✅ Simplifié
+
   // Pro uniquement
   businessId?: string;
 }

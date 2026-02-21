@@ -1,34 +1,52 @@
 import { Timestamp } from "firebase/firestore";
-export type BookingStatus =
-  | "pending"
-  | "confirmed"
-  | "cancelled"
-  | "completed"
-  | "no-show";
-export type CancelledBy = "client" | "professional" | null;
+
+/**
+ * ✅ BOOKING INTERFACE COMPLÈTE
+ */
 export interface Booking {
   id: string;
   clientId: string;
   businessId: string;
   serviceId: string;
-  date: Timestamp;
+
+  // 📅 DATE & TIME
+  date: Date | Timestamp;
   startTime: string;
   endTime: string;
   duration: number;
-  status: BookingStatus;
+
+  // 🔖 STATUS & NOTES
+  status: "pending" | "confirmed" | "completed" | "cancelled" | "no-show";
   notes: string | null;
+
+  // 💰 PRICING
   price: number;
-  cancelledBy: CancelledBy;
-  cancellationReason: string | null;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  completedAt: Timestamp | null;
-  // Ajouter à l'interface Booking :
-  totalPrice: number; // Prix total du service
-  depositRequired: boolean; // Y a-t-il un acompte ?
-  depositPercentage: number; // 30, 50, 100 ou 0
-  depositAmount: number; // Montant de l'acompte
-  paymentStatus: "pending" | "deposit_paid" | "completed" | "refunded";
+  totalPrice: number;
+  depositRequired: boolean;
+  depositPercentage: number;
+  depositAmount: number;
+
+  // 💳 PAYMENT
+  paymentStatus: "pending" | "paid" | "failed" | "refunded";
   depositPaidAt: Timestamp | null;
   completedPaymentAt: Timestamp | null;
+
+  // ❌ CANCELLATION
+  cancelledBy: "client" | "professional" | null;
+  cancellationReason: string | null;
+
+  // ⏰ TIMESTAMPS
+  createdAt: Timestamp | Date;
+  updatedAt: Timestamp | Date;
 }
+
+/**
+ * ✅ INPUT TYPE POUR CRÉER UNE RÉSERVATION
+ */
+export type CreateBookingInput = Omit<
+  Booking,
+  "id" | "createdAt" | "updatedAt"
+>;
+
+export type BookingStatus = Booking["status"];
+export type UpdateBookingInput = Partial<Booking>;

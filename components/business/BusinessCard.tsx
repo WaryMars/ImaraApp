@@ -29,7 +29,7 @@ export function BusinessCard({
   return (
     <TouchableOpacity
       style={styles.card}
-      onPress={() => router.push(`/business/${id}` as any)}
+      onPress={() => router.push(`/(business)/${id}` as any)}
     >
       <Image source={{ uri: image }} style={styles.image} />
 

@@ -43,7 +43,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/config/firebase";
 
-// const DEFAULT_AVATAR = "https://randomuser.me/api/portraits/men/32.jpg";
+const DEFAULT_AVATAR = "@/assets/images/default_user.svg";
 
 const uploadImageToStorage = async (
   uri: string,
@@ -106,7 +106,9 @@ const uploadImageToStorage = async (
 };
 
 export default function ProfileScreen() {
-  const { user, firebaseUser, signOut, refreshUser } = useAuth();
+  // const { user, firebaseUser, signOut, refreshUser } = useAuth();
+  const { user, logout } = useAuth();
+  const firebaseUser = user ? (user as any)._firebaseUser : null;
 
   if (!user || !firebaseUser) {
     return (
@@ -157,7 +159,7 @@ export default function ProfileScreen() {
         setEditPhoto(result.assets[0].uri);
       }
     } catch (err) {
-      Alert.alert("Erreur image", getErrorMessage(err));
+      Alert.alert("Erreur image", String(err));
     }
   };
 
@@ -196,12 +198,12 @@ export default function ProfileScreen() {
         updatedAt: new Date(),
       });
 
-      await refreshUser();
+      // await refreshUser();
 
       setEditVisible(false);
       Alert.alert("Succès", "Profil mis à jour ✅");
     } catch (err) {
-      Alert.alert("Erreur", getErrorMessage(err));
+      Alert.alert("Erreur", String(err));
     }
     setLoading(false);
   };
@@ -224,7 +226,7 @@ export default function ProfileScreen() {
       setPwd2("");
       Alert.alert("Succès", "Mot de passe modifié ✅");
     } catch (err) {
-      Alert.alert("Erreur", getErrorMessage(err));
+      Alert.alert("Erreur", String(err));
     }
     setLoading(false);
   };
@@ -243,7 +245,7 @@ export default function ProfileScreen() {
       setDelVisible(false);
       Alert.alert("Compte supprimé", "Votre compte Imara a bien été supprimé.");
     } catch (err) {
-      Alert.alert("Erreur", getErrorMessage(err));
+      Alert.alert("Erreur", String(err));
     }
     setLoading(false);
   };
@@ -335,7 +337,7 @@ export default function ProfileScreen() {
           <ProfileItem
             text="Déconnexion"
             icon={<LogOut color="#fff" size={20} />}
-            onPress={signOut}
+            onPress={logout}
           />
         </Section>
 

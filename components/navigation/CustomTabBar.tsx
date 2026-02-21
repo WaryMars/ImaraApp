@@ -1,7 +1,13 @@
 import React from "react";
 import { View, StyleSheet, Platform } from "react-native";
 import { usePathname } from "expo-router";
-import { Home, MessageCircle, Lightbulb, Map } from "lucide-react-native";
+import {
+  Home,
+  MessageCircle,
+  Lightbulb,
+  Map,
+  Calendar,
+} from "lucide-react-native";
 import { TabBarButton } from "./TabBarButton";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -11,9 +17,10 @@ export function CustomTabBar() {
 
   const tabs = [
     { href: "/(tabs)", icon: Home, label: "Home" },
+    { href: "/(tabs)/booking", icon: Calendar, label: "Bookings" },
     { href: "/(tabs)/map", icon: Map, label: "Map" },
     { href: "/(tabs)/inspiration", icon: Lightbulb, label: "Inspiration" },
-    { href: "/(tabs)/messages", icon: MessageCircle, label: "Messages" },
+    { href: "/(tabs)/chat", icon: MessageCircle, label: "Chat" },
   ];
 
   return (

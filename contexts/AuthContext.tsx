@@ -1,89 +1,67 @@
-import React, { createContext, useState, useEffect, useContext } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
 import {
-  User as FirebaseUser,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signOut as firebaseSignOut,
+  signOut,
   onAuthStateChanged,
-  sendPasswordResetEmail,
 } from "firebase/auth";
 import { doc, getDoc, setDoc, Timestamp } from "firebase/firestore";
-import { router } from "expo-router";
 import { auth, db } from "@/config/firebase";
-import { User, UserType, UserMode } from "@/types/user.types";
+import { User, UserType, UserPreferences } from "@/types/user.types";
+import {
+  registerForPushNotifications,
+  saveExpoPushToken,
+} from "@/services/notification.service";
 
 interface AuthContextType {
   user: User | null;
-  firebaseUser: FirebaseUser | null;
-  loading: boolean;
   isGuest: boolean;
+  loading: boolean;
   signUp: (
     email: string,
     password: string,
     userData: Partial<User>
   ) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
-  signOut: () => Promise<void>;
-  continueAsGuest: () => void;
-  resetPassword: (email: string) => Promise<void>;
-  refreshUser: () => Promise<void>; // ← AJOUTE CETTE LIGNE
+  logout: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>({} as AuthContextType);
+// ✅ CRÉER LE CONTEXTE
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useAuth = () => useContext(AuthContext);
-
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+// ✅ PROVIDER
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [isGuest, setIsGuest] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [isGuest, setIsGuest] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
-        if (userDoc.exists()) {
-          const userData = { id: firebaseUser.uid, ...userDoc.data() } as User;
-          setUser(userData);
-          setIsGuest(false);
-
-          // Redirection selon le type d'utilisateur
-          if (userData.type === "professional") {
-            router.replace("/(professional)/dashboard");
-          } else {
-            router.replace("/(tabs)");
+        try {
+          const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+          if (userDoc.exists()) {
+            setUser(userDoc.data() as User);
+            setIsGuest(false);
           }
+        } catch (error) {
+          console.error("❌ Erreur récupération utilisateur:", error);
         }
-        setFirebaseUser(firebaseUser);
       } else {
-        // Si pas connecté et pas invité, rester sur login
-        if (!isGuest) {
-          setUser(null);
-          setFirebaseUser(null);
-        }
+        setUser(null);
+        setIsGuest(true);
       }
       setLoading(false);
     });
 
-    return unsubscribe;
-  }, [isGuest]);
-
-  // ← AJOUTE CETTE FONCTION (pour recharger les données utilisateur après modification)
-  const refreshUser = async () => {
-    if (!firebaseUser) return;
-    try {
-      const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
-      if (userDoc.exists()) {
-        const userData = { id: firebaseUser.uid, ...userDoc.data() } as User;
-        setUser(userData);
-      }
-    } catch (error) {
-      console.error("Erreur lors du refresh utilisateur:", error);
-    }
-  };
+    return () => unsubscribe();
+  }, []);
 
   const signUp = async (
     email: string,
@@ -98,6 +76,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       );
       const { uid } = userCredential.user;
 
+      // ✅ PREFERENCES SIMPLIFIÉ
+      const preferences: UserPreferences = {
+        notifications: userData.type === "client",
+        searchRadius: 10,
+      };
+
       const newUser: User = {
         id: uid,
         email,
@@ -107,102 +91,86 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         lastName: userData.lastName || "",
         phoneNumber: userData.phoneNumber || "",
         profilePicture: null,
-        gdprConsent: userData.gdprConsent!,
-        dataProcessingConsent: userData.dataProcessingConsent!,
+        gdprConsent: {
+          marketing: false,
+          analytics: false,
+          consentDate: Timestamp.now(),
+        },
+        dataProcessingConsent: false,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
         lastLoginAt: Timestamp.now(),
         ...(userData.type === "client" && {
           favoriteBusinesses: [],
-          preferences: {
-            notifications: true,
-            searchRadius: 10,
-          },
+          preferences,
         }),
       };
 
       await setDoc(doc(db, "users", uid), newUser);
+      const token = await registerForPushNotifications();
+      if (token) {
+        await saveExpoPushToken(uid, token);
+      }
       setUser(newUser);
       setIsGuest(false);
     } catch (error) {
-      console.error("Erreur inscription:", error);
+      console.error("❌ Erreur inscription:", error);
       throw error;
     }
   };
 
   const signIn = async (email: string, password: string) => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      setIsGuest(false);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const { uid } = userCredential.user;
+
+      const userDoc = await getDoc(doc(db, "users", uid));
+      const token = await registerForPushNotifications();
+      if (token) {
+        await saveExpoPushToken(uid, token);
+      }
+      if (userDoc.exists()) {
+        setUser(userDoc.data() as User);
+        setIsGuest(false);
+      }
     } catch (error) {
-      console.error("Erreur connexion:", error);
+      console.error("❌ Erreur connexion:", error);
       throw error;
     }
   };
 
-  const signOut = async () => {
+  const logout = async () => {
     try {
-      await firebaseSignOut(auth);
+      await signOut(auth);
       setUser(null);
-      setFirebaseUser(null);
-      setIsGuest(false);
-      router.replace("/(auth)/login");
+      setIsGuest(true);
     } catch (error) {
-      console.error("Erreur déconnexion:", error);
+      console.error("❌ Erreur déconnexion:", error);
       throw error;
     }
   };
 
-  const continueAsGuest = () => {
-    setIsGuest(true);
-    setUser({
-      id: "guest",
-      email: "",
-      type: "client",
-      mode: "guest",
-      firstName: "Invité",
-      lastName: "",
-      phoneNumber: "",
-      profilePicture: null,
-      gdprConsent: {
-        marketing: false,
-        analytics: false,
-        consentDate: Timestamp.now(),
-      },
-      dataProcessingConsent: false,
-      createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
-      lastLoginAt: Timestamp.now(),
-      favoriteBusinesses: [],
-      preferences: {
-        notifications: false,
-        searchRadius: 10,
-      },
-    });
-    router.replace("/(tabs)");
-  };
+  return (
+    <AuthContext.Provider
+      value={{ user, isGuest, loading, signUp, signIn, logout }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
 
-  const resetPassword = async (email: string) => {
-    try {
-      await sendPasswordResetEmail(auth, email);
-    } catch (error) {
-      console.error("Erreur réinitialisation:", error);
-      throw error;
-    }
-  };
+// ✅ EXPORTE LE CONTEXTE
+export { AuthContext };
 
-  const value = {
-    user,
-    firebaseUser,
-    loading,
-    isGuest,
-    signUp,
-    signIn,
-    signOut,
-    continueAsGuest,
-    resetPassword,
-    refreshUser, // ← AJOUTE CETTE LIGNE
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
+// ✅ EXPORT LE HOOK
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within AuthProvider");
+  }
+  return context;
+}

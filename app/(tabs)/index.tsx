@@ -17,6 +17,11 @@ import { FilterChip } from "@/components/common/FilterChips";
 import { BusinessCard } from "@/components/business/BusinessCard";
 import { LastVisitCard } from "@/components/business/LastVisitCard";
 import { DrawerContext } from "./_layout";
+import {
+  registerForPushNotifications,
+  saveExpoPushToken,
+  setupNotificationListeners,
+} from "@/services/notification.service";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusinesses } from "@/hooks/useBusinesses";
 
@@ -99,7 +104,7 @@ export default function HomeScreen() {
                 source={{
                   uri:
                     user?.profilePicture ||
-                    "https://randomuser.me/api/portraits/men/32.jpg",
+                    "@/assets/images/default-avatar.svg",
                 }}
                 style={styles.profileImage}
               />
